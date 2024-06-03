@@ -1,0 +1,10 @@
+version: '3.8'
+services:
+  postgres:
+    build: .
+    environment:
+      - GOOGLE_APPLICATION_CREDENTIALS=/path/to/credentials.json
+    volumes:
+      - ./path/to/credentials.json:/path/to/credentials.json
+    ports:
+      - "5432:5432"
