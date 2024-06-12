@@ -1,19 +1,33 @@
-FROM postgres:12
+# Usa la imagen oficial de PostgreSQL
+FROM postgres:15.6
 
-RUN apt-get update && apt-get install -y \
-    postgresql-contrib \
-    postgresql-server-dev-all \
-    && pip install multicorn google-cloud-bigquery
+# Instala dependencias necesarias
+RUN apt-get update && apt-get install -y python3 python3-pip python3-venv postgresql-plpython3-15
 
-# Copy the configuration file
-COPY postgresql.conf /etc/postgresql/postgresql.conf
+# Crea un entorno virtual para Python
+RUN python3 -m venv /opt/venv
 
-# Set the environment variables for credentials
-ENV GOOGLE_APPLICATION_CREDENTIALS=/path/to/credentials.json
+# Crea el directorio para las credenciales de Google Cloud
+RUN mkdir -p /etc/gcloud
 
-# Copy the credentials file
-COPY credentials.json /path/to/credentials.json
+# Copia los archivos de script y las credenciales al contenedor
+COPY credentials.json /etc/gcloud/credentials.json
+COPY requirements.txt /usr/local/bin/requirements.txt
 
-# Copy the initialization scripts
-COPY init-db.sh /docker-entrypoint-initdb.d/init-db.sh
-COPY setup_fdw.sh /docker-entrypoint-initdb.d/setup_fdw.sh
+# Activa el entorno virtual y instala las bibliotecas de Python necesarias
+RUN /opt/venv/bin/pip install -r /usr/local/bin/requirements.txt
+
+# Establece la variable de entorno para las credenciales de Google Cloud
+ENV GOOGLE_APPLICATION_CREDENTIALS=/etc/gcloud/credentials.json
+
+# Establece la variable de entorno para el entorno virtual
+ENV PATH="/opt/venv/bin:$PATH"
+
+# Establece la contraseña del superusuario de PostgreSQL
+ENV POSTGRES_PASSWORD=mysecretpassword
+
+# Habilita la extensión plpython3u y configura la base de datos
+COPY init.sql /docker-entrypoint-initdb.d/init.sql
+
+# Comando por defecto para iniciar PostgreSQL
+CMD ["postgres"]
